@@ -1,0 +1,728 @@
+@import "tailwindcss";
+
+/* ============================================
+   EAGLE RUSH — AAA PREMIUM DESIGN SYSTEM
+   ============================================ */
+
+@theme {
+  --font-display: "Orbitron", "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "Fira Code", "Consolas", monospace;
+
+  /* Brand Palette */
+  --color-brand-blue: #3b82f6;
+  --color-brand-cyan: #06b6d4;
+  --color-brand-purple: #8b5cf6;
+  --color-brand-pink: #ec4899;
+  --color-brand-gold: #f59e0b;
+  --color-brand-emerald: #10b981;
+
+  /* Backgrounds */
+  --color-bg-deep: #020617;
+  --color-bg-dark: #0f172a;
+  --color-bg-card: rgba(255, 255, 255, 0.04);
+
+  /* Glow keyframes */
+  --animate-float: floatY 6s ease-in-out infinite;
+  --animate-glow-blue: glowBlue 2.5s ease-in-out infinite;
+  --animate-pulse-slow: pulse 3s ease-in-out infinite;
+  --animate-spin-slow: spin 20s linear infinite;
+}
+
+/* -------- Keyframes -------- */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+
+@keyframes glowBlue {
+  0%, 100% { box-shadow: 0 0 12px rgba(59,130,246,0.25), 0 0 30px rgba(59,130,246,0.1); }
+  50%       { box-shadow: 0 0 25px rgba(59,130,246,0.55), 0 0 60px rgba(59,130,246,0.25); }
+}
+
+@keyframes cloudDrift {
+  0%   { transform: translateX(-120px); opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.4; }
+  100% { transform: translateX(calc(100vw + 120px)); opacity: 0; }
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.4); }
+}
+
+@keyframes lightRay {
+  0%   { opacity: 0; transform: scaleY(0.6); }
+  30%  { opacity: 0.06; }
+  70%  { opacity: 0.04; }
+  100% { opacity: 0; transform: scaleY(1.2); }
+}
+
+@keyframes particleDrift {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10%  { opacity: 0.7; }
+  90%  { opacity: 0.3; }
+  100% { transform: translateY(-120vh) translateX(40px) scale(0.4); opacity: 0; }
+}
+
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scanline {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes borderRotate {
+  from { --angle: 0deg; }
+  to   { --angle: 360deg; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-4px); }
+  40%, 80% { transform: translateX(4px); }
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 1; background: rgba(239, 68, 68, 0.95); box-shadow: 0 0 35px rgba(239, 68, 68, 0.9); }
+  50% { opacity: 0.5; background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 20px rgba(255, 255, 255, 0.6); }
+}
+
+/* -------- Global Reset -------- */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  background: linear-gradient(160deg, #020617 0%, #0f172a 50%, #111827 100%);
+  background-attachment: fixed;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  user-select: none;
+}
+
+.game-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+.main-game {
+  flex: 1;
+  height: 100vh;
+  position: relative;
+}
+
+.hud {
+  height: 90px;
+}
+
+.arena {
+  width: 100%;
+  height: calc(100vh - 90px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* -------- Custom Scrollbar -------- */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: rgba(15,23,42,0.8); }
+::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.4); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,0.7); }
+
+/* ==========================================
+   BACKGROUND LAYER COMPONENTS
+   ========================================== */
+
+.bg-animated {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Stars */
+.star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  animation: starTwinkle var(--duration, 3s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Clouds */
+.cloud {
+  position: absolute;
+  border-radius: 100px;
+  background: linear-gradient(90deg, rgba(148,163,184,0.06), rgba(148,163,184,0.12), rgba(148,163,184,0.06));
+  filter: blur(18px);
+  animation: cloudDrift var(--speed, 60s) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Light rays */
+.light-ray {
+  position: absolute;
+  width: 2px;
+  background: linear-gradient(180deg, transparent, rgba(59,130,246,0.08), transparent);
+  transform-origin: top center;
+  animation: lightRay var(--dur, 8s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+/* Floating particles */
+.bg-particle {
+  position: absolute;
+  border-radius: 50%;
+  animation: particleDrift var(--dur, 12s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+
+/* ==========================================
+   GLASSMORPHISM COMPONENTS
+   ========================================== */
+
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-strong {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 24px;
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.08), 0 8px 32px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1),
+              border-color 0.3s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 40px rgba(59, 130, 246, 0.2), 0 20px 40px rgba(0, 0, 0, 0.5);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* ==========================================
+   TYPOGRAPHY
+   ========================================== */
+
+.font-orbitron { font-family: "Orbitron", sans-serif; }
+.font-inter    { font-family: "Inter", sans-serif; }
+
+.text-gradient-blue {
+  background: linear-gradient(135deg, #60a5fa, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24, #f59e0b);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-purple {
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-text {
+  font-family: "Orbitron", sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  background: linear-gradient(135deg, #60a5fa 0%, #22d3ee 60%, #60a5fa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-transform: uppercase;
+}
+
+/* ==========================================
+   BUTTONS
+   ========================================== */
+
+.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  border: none;
+  border-radius: 16px;
+  color: white;
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.btn-primary:hover {
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.6), 0 8px 24px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover::before { opacity: 1; }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+  transform: scale(1.03);
+}
+
+/* ==========================================
+   SIDEBAR NAV ITEMS
+   ========================================== */
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: 14px;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: linear-gradient(180deg, #3b82f6, #06b6d4);
+  opacity: 0;
+  border-radius: 0 2px 2px 0;
+  transition: opacity 0.25s;
+}
+
+.nav-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.15);
+  transform: scale(1.02);
+}
+
+.nav-item.active {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.12);
+}
+
+.nav-item.active::before { opacity: 1; }
+
+/* ==========================================
+   STAT PILLS / BADGES
+   ========================================== */
+
+.stat-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 40px;
+  backdrop-filter: blur(12px);
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.stat-pill:hover {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* ==========================================
+   PROGRESS BARS
+   ========================================== */
+
+.progress-track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+  transition: width 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* ==========================================
+   GLOW EFFECTS
+   ========================================== */
+
+.glow-blue  { box-shadow: 0 0 20px rgba(59, 130, 246, 0.4); }
+.glow-cyan  { box-shadow: 0 0 20px rgba(6, 182, 212, 0.4); }
+.glow-purple{ box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); }
+.glow-gold  { box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+.glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+.glow-pink  { box-shadow: 0 0 20px rgba(236, 72, 153, 0.4); }
+
+.neon-blue-border {
+  border: 1px solid rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.15), inset 0 0 20px rgba(59, 130, 246, 0.03);
+}
+
+/* ==========================================
+   LEADERBOARD
+   ========================================== */
+
+.lb-row {
+  display: grid;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.2s ease;
+  cursor: default;
+}
+
+.lb-row:hover {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.lb-row.self {
+  background: rgba(59, 130, 246, 0.08);
+  border-left: 2px solid #3b82f6;
+}
+
+.rank-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Orbitron", sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.rank-gold   { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #000; }
+.rank-silver { background: linear-gradient(135deg, #94a3b8, #cbd5e1); color: #000; }
+.rank-bronze { background: linear-gradient(135deg, #b45309, #d97706); color: #fff; }
+.rank-other  { background: rgba(255,255,255,0.06); color: #64748b; border: 1px solid rgba(255,255,255,0.08); }
+
+/* ==========================================
+   CHECK-IN CALENDAR
+   ========================================== */
+
+.checkin-day {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 10px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.checkin-day.claimed {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.15);
+}
+
+.checkin-day.today {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
+  animation: glowBlue 2.5s ease-in-out infinite;
+}
+
+.checkin-day.locked {
+  opacity: 0.45;
+}
+
+/* ==========================================
+   MISSIONS
+   ========================================== */
+
+.mission-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.mission-card:hover {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.18);
+  transform: translateY(-2px);
+}
+
+/* ==========================================
+   ACHIEVEMENT CARDS
+   ========================================== */
+
+.achievement-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  transition: all 0.3s ease;
+}
+
+.achievement-card.unlocked {
+  background: rgba(59, 130, 246, 0.06);
+  border-color: rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.08);
+}
+
+.achievement-card:hover {
+  transform: translateY(-3px);
+}
+
+/* ==========================================
+   WALLET BUTTON
+   ========================================== */
+
+.wallet-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  border: none;
+  border-radius: 14px;
+  padding: 10px 20px;
+  color: white;
+  font-family: "Orbitron", sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+
+.wallet-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.wallet-btn:hover {
+  transform: scale(1.05) translateY(-1px);
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.55), 0 8px 20px rgba(59, 130, 246, 0.3);
+}
+
+.wallet-btn:hover::after { opacity: 1; }
+
+/* ==========================================
+   GAME CANVAS WRAPPER
+   ========================================== */
+
+.game-canvas-wrapper {
+  position: relative;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 60px rgba(59, 130, 246, 0.1), 0 40px 80px rgba(0, 0, 0, 0.6);
+}
+
+/* ==========================================
+   SKIN CARDS
+   ========================================== */
+
+.skin-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.skin-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(59, 130, 246, 0.12);
+}
+
+.skin-card.equipped {
+  border-color: rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.2);
+}
+
+/* ==========================================
+   SECTION HEADINGS
+   ========================================== */
+
+.section-title {
+  font-family: "Orbitron", sans-serif;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* ==========================================
+   UTILITY — ANIMATED COUNTER
+   ========================================== */
+
+.counter-animate {
+  animation: countUp 0.4s ease-out both;
+}
+
+/* ==========================================
+   TOP BAR
+   ========================================== */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(2, 6, 23, 0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* ==========================================
+   CANVAS DEFAULTS
+   ========================================== */
+
+canvas {
+  display: block;
+  image-rendering: auto;
+}
+
+/* ==========================================
+   LAYOUT BASE
+   ========================================== */
+
+.app-layout {
+  display: flex;
+  min-height: 100svh;
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  height: 100svh;
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(30px) saturate(200%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile sidebar */
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .app-layout {
+    flex-direction: column;
+  }
+}

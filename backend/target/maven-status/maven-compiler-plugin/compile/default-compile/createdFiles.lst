@@ -1,0 +1,8 @@
+com\eaglerush\model\Player.class
+com\eaglerush\model\PlayerRepository.class
+com\eaglerush\service\SecurityService.class
+com\eaglerush\model\Leaderboard.class
+com\eaglerush\Application.class
+com\eaglerush\model\LeaderboardRepository.class
+com\eaglerush\controller\LeaderboardController.class
+com\eaglerush\controller\GameController.class
