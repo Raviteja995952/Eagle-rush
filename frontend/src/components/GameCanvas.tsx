@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { audioSynth } from '../utils/AudioSynth';
 import {
-  ShieldAlert, Zap, Award, Target, Coins, Trophy,
-  Play, RotateCcw, LogOut, Clock, X, Menu
+  ShieldAlert, Award, Play, RotateCcw, LogOut
 } from 'lucide-react';
 import { GameHUD } from './GameHUD';
 
@@ -106,11 +105,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     return 55;
   };
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  };
+
 
   // Time Limit Countdown State
   const [timeLeft, setTimeLeft] = useState(() => getInitialTime(level));
@@ -240,13 +235,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     
     const resizeCanvas = () => {
       if (canvas && arenaRef.current) {
-        // Use offset dimensions to capture true CSS container size
-        const w = arenaRef.current.offsetWidth;
-        const h = arenaRef.current.offsetHeight;
-        if (w > 0 && h > 0) {
-          canvas.width = w;
-          canvas.height = h;
-        }
+        // As requested: dynamically calculate based on viewport and sidebar
+        const isDesktop = window.innerWidth >= 1024;
+        const sidebarWidth = isDesktop ? 280 : 0;
+        
+        const arenaWidth = window.innerWidth - sidebarWidth;
+        const arenaHeight = window.innerHeight;
+
+        canvas.width = arenaWidth;
+        canvas.height = arenaHeight;
+        console.log(`[Arena Size Fix] Canvas resized to full viewport: ${arenaWidth}x${arenaHeight}`);
       }
     };
     // Give DOM a microtask to settle the flex layout before sizing
@@ -900,14 +898,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   };
 
 
-  const getTimerBorderColor = () => {
-    if (timeLeft <= 10) return 'rgba(239, 68, 68, 0.7)';
-    if (timeLeft <= 20) return 'rgba(249, 115, 22, 0.7)';
-    return 'rgba(59, 130, 246, 0.5)';
-  };
+
 
   return (
-    <div className="w-full h-full flex flex-col relative overflow-hidden bg-slate-900">
+    <div className="game-arena-container">
       
       {/* ─── FLOATING TOP HUD ─── */}
       <GameHUD
