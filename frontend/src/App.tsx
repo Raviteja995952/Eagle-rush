@@ -96,6 +96,8 @@ function App() {
 
     try {
       if (!publicClient) throw new Error("No public client available");
+      const chainId = await publicClient.getChainId();
+      addWeb3Log(`DEBUG: Connected to Chain ID ${chainId}. Contract: ${EAGLE_RUSH_ADDRESS}`);
 
       const pData: any = await publicClient.readContract({
         address: EAGLE_RUSH_ADDRESS,
@@ -188,12 +190,15 @@ function App() {
 
       const dataWithSuffix = ox.Hex.concat(data as `0x${string}`, BUILDER_CODE_SUFFIX as `0x${string}`);
 
+      addWeb3Log(`TX: Please confirm Score Submission transaction in your wallet...`);
       const hash = await walletClient.sendTransaction({
         to: EAGLE_RUSH_ADDRESS,
         data: dataWithSuffix
       });
+      addWeb3Log(`TX: Submitted! Hash: ${hash}. Waiting for confirmation...`);
       
-      addWeb3Log(`TX: Score Submitted to Base L2! Hash: ${hash}`);
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash });
+      addWeb3Log(`TX CONFIRMED: Score Submitted to Base L2! Block: ${receipt?.blockNumber}`);
       
       const newXp = (playerData.xp + earnedXp) % (100 * playerData.level);
       
@@ -251,12 +256,15 @@ function App() {
 
       const dataWithSuffix = ox.Hex.concat(data as `0x${string}`, BUILDER_CODE_SUFFIX as `0x${string}`);
 
+      addWeb3Log(`TX: Please confirm Daily Check-In transaction in your wallet...`);
       const txHash = await walletClient.sendTransaction({
         to: EAGLE_RUSH_ADDRESS,
         data: dataWithSuffix
       });
+      addWeb3Log(`TX: Submitted! Hash: ${txHash}. Waiting for confirmation...`);
 
-      addWeb3Log(`STREAK: Claimed check-in reward onchain! Hash: ${txHash}`);
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: txHash });
+      addWeb3Log(`TX CONFIRMED: Claimed check-in reward onchain! Block: ${receipt?.blockNumber}`);
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
       
       const pData: any = await publicClient?.readContract({
@@ -339,10 +347,15 @@ function App() {
       });
       const dataWithSuffix = ox.Hex.concat(data as `0x${string}`, BUILDER_CODE_SUFFIX as `0x${string}`);
 
-      await walletClient.sendTransaction({
+      addWeb3Log(`TX: Please confirm Start Hunt transaction in your wallet...`);
+      const txHash = await walletClient.sendTransaction({
         to: EAGLE_RUSH_ADDRESS,
         data: dataWithSuffix
       });
+      addWeb3Log(`TX: Submitted! Hash: ${txHash}. Waiting for confirmation...`);
+      
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash: txHash });
+      addWeb3Log(`TX CONFIRMED: Start Hunt successful! Block: ${receipt?.blockNumber}`);
       
       audioSynth.playClick();
       setGameState('playing');
