@@ -693,7 +693,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   }, [isMuted, levelTarget, isSlowMo, activeSkin]);
 
   // Click collision detection
-  const handleCanvasClick = (event: React.PointerEvent<HTMLCanvasElement>) => {
+  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     event.preventDefault();
     if (isPaused) return;
 
@@ -908,109 +908,64 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   return (
     <div className="w-full h-full flex flex-col relative overflow-hidden bg-slate-900">
       
-      {/* ─── FLOATING TOP HUD (Responsive) ─── */}
-      <div 
-        className="w-full flex items-center justify-center z-[100] relative lg:h-[80px] h-[50px] mt-2 lg:mt-0 px-2 lg:px-0 pointer-events-none"
-      >
-        {/* DESKTOP HUD */}
-        <motion.div 
-          className="hidden lg:flex bg-slate-900/85 backdrop-blur-xl border border-blue-500/30 rounded-2xl shadow-[0_0_25px_rgba(59,130,246,0.25)] px-6 items-center gap-6 h-[70px] pointer-events-auto"
-          variants={{
-            animate: { y: [0, -2, 0], transition: { duration: 4, repeat: Infinity, ease: "easeInOut" } }
+      {/* ─── FLOATING TOP HUD ─── */}
+      <div className="game-hud">
+        {/* Mobile Sidebar Toggle */}
+        <button onClick={onOpenSidebar} className="sidebar-toggle-btn">
+          <Menu size={20} />
+        </button>
+
+        {/* Level Card */}
+        <div className="hud-card hud-card-blue">
+          <Trophy size={18} style={{ color: '#3b82f6' }} />
+          <span className="hud-label">Lv</span>
+          <span className="hud-value">{level}</span>
+        </div>
+
+        {/* Target Card */}
+        <div className="hud-card hud-card-cyan">
+          <Target size={18} style={{ color: '#06b6d4' }} />
+          <span className="hud-label">Target</span>
+          <span className="hud-value">{hits}/{levelTarget}</span>
+        </div>
+
+        {/* Timer Circle */}
+        <div 
+          className={`hud-timer-circle ${timeLeft <= 5 && timeLeft > 0 ? 'animate-pulse' : ''} ${timeLeft === 0 ? 'animate-[flash_0.2s_infinite]' : ''}`}
+          style={{
+            border: `2px solid ${getTimerBorderColor()}`,
+            boxShadow: timeLeft <= 10 ? '0 0 15px rgba(239,68,68,0.5)' : timeLeft <= 20 ? '0 0 15px rgba(249,115,22,0.4)' : '0 0 10px rgba(59,130,246,0.3)',
           }}
-          animate="animate"
         >
-          {/* Level Chip */}
-          <div className="h-12 rounded-xl bg-blue-500/15 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)] px-4 flex items-center gap-2">
-            <Trophy size={18} className="text-blue-500" />
-            <span className="font-orbitron text-xs text-slate-400 font-bold uppercase">Lv</span>
-            <span className="font-orbitron text-xl text-slate-200 font-bold">{level}</span>
+          <div className="hud-timer-text" style={{ fontSize: '14px', fontFamily: 'Orbitron', fontWeight: 800, color: timeLeft <= 10 ? '#f87171' : timeLeft <= 20 ? '#fb923c' : '#60a5fa', lineHeight: 1, display: 'flex', alignItems: 'center', flexDirection: 'column', gap: '2px' }}>
+            <Clock size={12} />
+            <span>{formatTime(timeLeft)}</span>
           </div>
+        </div>
 
-          {/* Target Chip */}
-          <div className="h-12 rounded-xl bg-cyan-500/15 border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.2)] px-4 flex items-center gap-2">
-            <Target size={18} className="text-cyan-500" />
-            <span className="font-orbitron text-xs text-slate-400 font-bold uppercase">Target</span>
-            <span className="font-orbitron text-xl text-slate-200 font-bold">{hits}/{levelTarget}</span>
-          </div>
+        {/* Score Card */}
+        <div className="hud-card hud-card-amber">
+          <Coins size={18} style={{ color: '#f59e0b' }} />
+          <span className="hud-label">Score</span>
+          <motion.span key={score} initial={{ scale: 1.2, color: '#fbbf24' }} animate={{ scale: 1, color: '#e2e8f0' }} className="hud-value">
+            {score.toLocaleString()}
+          </motion.span>
+        </div>
 
-          {/* Timer Circle */}
-          <div className="relative flex items-center justify-center">
-            <div 
-              style={{ 
-                border: `2px solid ${getTimerBorderColor()}`,
-                boxShadow: timeLeft <= 10 ? '0 0 15px rgba(239,68,68,0.5)' : timeLeft <= 20 ? '0 0 15px rgba(249,115,22,0.4)' : '0 0 10px rgba(59,130,246,0.3)',
-              }} 
-              className={`w-[60px] h-[60px] rounded-full bg-slate-900/95 flex items-center justify-center transition-all ${timeLeft <= 5 && timeLeft > 0 ? 'animate-pulse' : ''} ${timeLeft === 0 ? 'animate-[flash_0.2s_infinite]' : ''}`}
-            >
-              <div style={{ color: timeLeft <= 10 ? '#f87171' : timeLeft <= 20 ? '#fb923c' : '#60a5fa' }} className="text-sm font-orbitron font-extrabold flex flex-col items-center gap-[2px]">
-                <Clock size={12} />
-                <span>{formatTime(timeLeft)}</span>
-              </div>
-            </div>
-          </div>
+        {/* Combo Card */}
+        <div className="hud-card hud-card-pink" style={{ boxShadow: `0 0 ${Math.min(25, 10 + combo * 1.5)}px rgba(236,72,153,${Math.min(0.6, 0.2 + combo * 0.025)})` }}>
+          <Zap size={18} style={{ color: '#ec4899' }} />
+          <span className="hud-label">Combo</span>
+          <span className="hud-value" style={{ color: combo > 0 ? '#f472b6' : '#e2e8f0' }}>{combo}x</span>
+        </div>
 
-          {/* Score Chip */}
-          <div className="h-12 rounded-xl bg-amber-500/15 border border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.2)] px-4 flex items-center gap-2">
-            <Coins size={18} className="text-amber-500" />
-            <span className="font-orbitron text-xs text-slate-400 font-bold uppercase">Score</span>
-            <motion.span key={score} initial={{ scale: 1.2, color: '#fbbf24' }} animate={{ scale: 1, color: '#e2e8f0' }} className="font-orbitron text-xl font-bold">
-              {score.toLocaleString()}
-            </motion.span>
-          </div>
-
-          {/* Combo Chip */}
-          <div style={{ boxShadow: `0 0 ${Math.min(25, 10 + combo * 1.5)}px rgba(236,72,153,${Math.min(0.6, 0.2 + combo * 0.025)})` }} className="h-12 rounded-xl bg-pink-500/15 border border-pink-500/30 px-4 flex items-center gap-2">
-            <Zap size={18} className="text-pink-500" />
-            <span className="font-orbitron text-xs text-slate-400 font-bold uppercase">Combo</span>
-            <span style={{ color: combo > 0 ? '#f472b6' : '#e2e8f0' }} className="font-orbitron text-xl font-bold">{combo}x</span>
-          </div>
-
-          {/* Misses Chip */}
-          <div className={`${shakeMiss ? 'animate-[shake_0.4s_ease-in-out]' : ''} h-12 rounded-xl bg-red-500/15 border border-red-500/30 px-4 flex items-center gap-2`} style={{ boxShadow: misses > 0 ? '0 0 15px rgba(239,68,68,0.3)' : '0 0 10px rgba(239,68,68,0.1)' }}>
-            <X size={18} className="text-red-500" />
-            <span className="font-orbitron text-xs text-slate-400 font-bold uppercase">Miss</span>
-            <motion.span key={misses} initial={{ scale: 1.2, color: '#ef4444' }} animate={{ scale: 1, color: '#f87171' }} className="font-orbitron text-xl font-bold">
-              {misses}
-            </motion.span>
-          </div>
-        </motion.div>
-
-        {/* MOBILE COMPACT HUD */}
-        <div className="lg:hidden flex bg-slate-900/90 backdrop-blur-xl border border-blue-500/30 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.2)] px-2 py-1 items-center justify-between w-full max-w-[500px] h-[50px] pointer-events-auto">
-          <button onClick={onOpenSidebar} className="text-slate-300 pr-2 border-r border-slate-700 h-full flex items-center">
-            <Menu size={20} />
-          </button>
-          
-          <div className="flex items-center gap-1 px-1">
-            <Trophy size={14} className="text-blue-500" />
-            <span className="font-orbitron text-[12px] text-slate-200 font-bold">{level}</span>
-          </div>
-          
-          <div className="flex items-center gap-1 px-1">
-            <Target size={14} className="text-cyan-500" />
-            <span className="font-orbitron text-[12px] text-slate-200 font-bold">{hits}/{levelTarget}</span>
-          </div>
-          
-          <div className="flex items-center gap-1 px-1">
-            <Clock size={14} className={timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-slate-300'} />
-            <span className={`font-orbitron text-[12px] font-bold ${timeLeft <= 10 ? 'text-red-500' : 'text-slate-200'}`}>{timeLeft}</span>
-          </div>
-          
-          <div className="flex items-center gap-1 px-1">
-            <Coins size={14} className="text-amber-500" />
-            <span className="font-orbitron text-[12px] text-slate-200 font-bold">{score}</span>
-          </div>
-          
-          <div className="flex items-center gap-1 px-1">
-            <Zap size={14} className={combo > 0 ? 'text-pink-500' : 'text-slate-500'} />
-            <span className={`font-orbitron text-[12px] font-bold ${combo > 0 ? 'text-pink-400' : 'text-slate-400'}`}>{combo}</span>
-          </div>
-          
-          <div className="flex items-center gap-1 pl-1 border-l border-slate-700 h-full">
-            <X size={14} className={misses > 0 ? 'text-red-500' : 'text-slate-500'} />
-            <span className={`font-orbitron text-[12px] font-bold ${misses > 0 ? 'text-red-400' : 'text-slate-400'}`}>{misses}</span>
-          </div>
+        {/* Misses Card */}
+        <div className={`hud-card hud-card-red ${shakeMiss ? 'animate-[shake_0.4s_ease-in-out]' : ''}`}>
+          <X size={18} style={{ color: '#ef4444' }} />
+          <span className="hud-label">Miss</span>
+          <motion.span key={misses} initial={{ scale: 1.2, color: '#ef4444' }} animate={{ scale: 1, color: '#f87171' }} className="hud-value">
+            {misses}
+          </motion.span>
         </div>
       </div>
 
@@ -1032,8 +987,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         {/* High-Performance Canvas spanning full arena */}
         <canvas
           ref={canvasRef}
-          onPointerDown={handleCanvasClick}
-          className="absolute inset-0 w-full h-full cursor-crosshair block z-0 touch-none"
+          onClick={handleCanvasClick}
+          className="absolute inset-0 w-full h-full cursor-crosshair block z-0"
         />
       </div>
 

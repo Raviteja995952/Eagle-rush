@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface LeaderboardRepository extends JpaRepository<Leaderboard, Long> {
-    List<Leaderboard> findByPeriodOrderByScoreDesc(String period);
+    List<Leaderboard> findByPeriodOrderByScoreDescXpDescLevelDesc(String period);
     List<Leaderboard> findByWalletAndPeriod(String wallet, String period);
 }

@@ -69,6 +69,8 @@ function App() {
   // Fetch Leaderboard whenever period changes
   useEffect(() => {
     fetchLeaderboard();
+    const interval = setInterval(fetchLeaderboard, 30000);
+    return () => clearInterval(interval);
   }, [leaderboardPeriod]);
 
   const addWeb3Log = (msg: string) => {
@@ -215,6 +217,39 @@ function App() {
         coins: playerData.coins + earnedCoins
       });
 
+      // Submit to Backend DB immediately
+      try {
+        await fetch('http://localhost:8080/api/leaderboard/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet: address,
+            score: finalScore,
+            level: levelReached,
+            xp: newXp,
+            coins: playerData.coins + earnedCoins,
+            combo: 1,
+            period: leaderboardPeriod
+          })
+        });
+        
+        // Refresh leaderboard to get the latest rank
+        const lbRes = await fetch(`http://localhost:8080/api/leaderboard?period=${leaderboardPeriod}`);
+        const lbData = await lbRes.json();
+        setLeaderboardData(lbData);
+        
+        const myRank = lbData.find((d: any) => d.wallet.toLowerCase() === address.toLowerCase())?.rank || 'N/A';
+        
+        console.log("=== Leaderboard Save Success ===");
+        console.log("Wallet Address:", address);
+        console.log("Score:", finalScore);
+        console.log("XP:", newXp);
+        console.log("Level:", levelReached);
+        console.log("Rank:", myRank);
+      } catch (err) {
+        console.error("Leaderboard backend error:", err);
+      }
+
     } catch (e) {
       addWeb3Log("ERROR: Failed to submit score transaction to Base.");
     }
@@ -223,26 +258,12 @@ function App() {
   // Fetch Leaderboard records
   const fetchLeaderboard = async () => {
     try {
-      if (!publicClient) return;
-      const data = await publicClient.readContract({
-        address: EAGLE_RUSH_ADDRESS,
-        abi: EAGLE_RUSH_ABI,
-        functionName: 'getLeaderboard'
-      }) as [readonly string[], readonly bigint[], readonly bigint[], readonly bigint[]];
-
-      const addrs = data[0];
-      const scores = data[1];
-      const levels = data[2];
-      
-      const formatted = addrs.map((addr, i) => ({
-        wallet: addr,
-        score: Number(scores[i]),
-        level: Number(levels[i]),
-        xp: 0
-      })).sort((a, b) => b.score - a.score);
-
-      setLeaderboardData(formatted);
+      const response = await fetch(`http://localhost:8080/api/leaderboard?period=${leaderboardPeriod}`);
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data = await response.json();
+      setLeaderboardData(data);
     } catch (e) {
+      console.error(e);
       setLeaderboardData([]);
     }
   };

@@ -21,6 +21,8 @@ public class Leaderboard {
     private int score;
     private int level;
     private int xp;
+    private int coins;
+    private int combo;
     private int achievementsCount;
 
     @Column(nullable = false)
@@ -31,11 +33,13 @@ public class Leaderboard {
 
     public Leaderboard() {}
 
-    public Leaderboard(String wallet, int score, int level, int xp, int achievementsCount, String period, Long timestamp) {
+    public Leaderboard(String wallet, int score, int level, int xp, int coins, int combo, int achievementsCount, String period, Long timestamp) {
         this.wallet = wallet;
         this.score = score;
         this.level = level;
         this.xp = xp;
+        this.coins = coins;
+        this.combo = combo;
         this.achievementsCount = achievementsCount;
         this.period = period;
         this.timestamp = timestamp;
@@ -80,6 +84,22 @@ public class Leaderboard {
 
     public void setXp(int xp) {
         this.xp = xp;
+    }
+
+    public int getCoins() {
+        return coins;
+    }
+
+    public void setCoins(int coins) {
+        this.coins = coins;
+    }
+
+    public int getCombo() {
+        return combo;
+    }
+
+    public void setCombo(int combo) {
+        this.combo = combo;
     }
 
     public int getAchievementsCount() {

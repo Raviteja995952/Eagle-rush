@@ -551,14 +551,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                   {leaderboardData.length > 0 ? leaderboardData.map((row,i) => {
                     const self = row.wallet?.toLowerCase() === playerData.wallet?.toLowerCase();
-                    const rc   = i===0?'rank-gold':i===1?'rank-silver':i===2?'rank-bronze':'rank-other';
+                    const rank = row.rank || i + 1;
+                    const rc   = rank===1?'rank-gold':rank===2?'rank-silver':rank===3?'rank-bronze':'rank-other';
                     return (
                       <motion.div key={row.id??i}
                         initial={{ opacity:0,x:-10 }} animate={{ opacity:1,x:0 }} transition={{ delay:i*.05 }}
                         className={`lb-row${self?' self':''}`}
                         style={{ gridTemplateColumns:'52px 1fr 70px 70px 90px' }}
                       >
-                        <div className={`rank-badge ${rc}`}>{i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
+                        <div className={`rank-badge ${rc}`}>{rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank}</div>
                         <div style={{ display:'flex',alignItems:'center',gap:9,minWidth:0 }}>
                           <div style={{ width:30,height:30,borderRadius:9,background:`hsl(${(parseInt(row.wallet?.slice(2,4)??'0',16)*1.4)%360},55%,28%)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,flexShrink:0 }}>🦅</div>
                           <span style={{ fontFamily:'Orbitron',fontSize:11,color:self?'#60a5fa':'#94a3b8',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' }}>{fw(row.wallet??'')}</span>
