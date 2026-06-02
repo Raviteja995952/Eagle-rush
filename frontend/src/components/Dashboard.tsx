@@ -4,7 +4,7 @@ import {
   Trophy, Calendar, Target, Award,
   Volume2, VolumeX, Layers, CheckCircle2,
   Compass, ShoppingBag, Terminal, Coins,
-  Flame, Shield, Lock, Gift
+  Flame, Shield, Lock, Gift, X, Menu
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { audioSynth } from '../utils/AudioSynth';
@@ -23,6 +23,9 @@ interface DashboardProps {
   onToggleMute: () => void;
   web3LedgerLogs: string[];
   onlySidebar?: boolean;
+  isSidebarOpen?: boolean;
+  onCloseSidebar?: () => void;
+  onOpenSidebar?: () => void;
 }
 
 const fadeUp = { hidden: { opacity: 0, y: 24 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' as any } } };
@@ -67,6 +70,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   leaderboardPeriod,
   setLeaderboardPeriod, leaderboardData, onStartGame,
   isMuted, onToggleMute, web3LedgerLogs, onlySidebar = false,
+  isSidebarOpen = false, onCloseSidebar, onOpenSidebar
 }) => {
   const [tab, setTab] = useState('play');
   const [missions, setMissions] = useState([
@@ -113,18 +117,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div style={{ display:'flex', minHeight:'100svh', position:'relative', zIndex:1 }}>
+    <div className="app-layout">
+
+      {/* Mobile Backdrop */}
+      {isSidebarOpen && onCloseSidebar && (
+        <div 
+          onClick={onCloseSidebar} 
+          className="lg:hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[998]"
+        />
+      )}
 
       {/* ─── SIDEBAR ────────────────────────────────────────────────────────── */}
       <motion.aside
         initial={{ x:-30, opacity:0 }}
         animate={{ x:0, opacity:1 }}
         transition={{ duration:.5, ease:'easeOut' }}
-        className="sidebar"
-        style={{ padding:'24px 16px', width: '320px', flexShrink: 0 }}
+        className={`sidebar ${isSidebarOpen ? 'open' : ''}`}
+        style={{ padding:'24px 16px' }}
       >
         {/* Logo */}
-        <div style={{ padding:'0 8px 24px', borderBottom:'1px solid rgba(255,255,255,.06)', marginBottom:20 }}>
+        <div style={{ padding:'0 8px 24px', borderBottom:'1px solid rgba(255,255,255,.06)', marginBottom:20, display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
           <div style={S.row}>
             <div style={{ width:44,height:44,borderRadius:14,background:'linear-gradient(135deg,#3b82f6,#06b6d4)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 0 22px rgba(59,130,246,.45)',flexShrink:0 }}>
               <span style={{ fontSize:22 }}>🦅</span>
@@ -134,13 +146,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div style={{ fontSize:9,fontFamily:'Inter',color:'#3b82f6',letterSpacing:2,textTransform:'uppercase',marginTop:1 }}>Sky Hunter Adventure</div>
             </div>
           </div>
+          {onCloseSidebar && (
+            <button onClick={onCloseSidebar} className="lg:hidden" style={{ background:'transparent', border:'none', color:'#94a3b8', cursor:'pointer', padding:4 }}>
+              <X size={20} />
+            </button>
+          )}
         </div>
 
         {/* Nav items */}
         <nav style={{ flex:1, display:'flex', flexDirection:'column', gap:4 }}>
           {NAV.map(({ id, label, Icon }) => (
             <button key={id}
-              onClick={() => { audioSynth.playClick(); setTab(id); }}
+              onClick={() => { audioSynth.playClick(); setTab(id); if (window.innerWidth < 1024 && onCloseSidebar) onCloseSidebar(); }}
               className={`nav-item${tab === id ? ' active' : ''}`}
             >
               <Icon size={17} />
@@ -197,9 +214,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         {/* TOP BAR */}
         <div className="topbar" style={{ padding:'0 28px',height:64,display:'flex',alignItems:'center',justifyContent:'space-between',gap:16 }}>
-          <span style={{ fontFamily:'Orbitron',fontSize:13,fontWeight:800,color:'#475569',textTransform:'uppercase',letterSpacing:2 }}>
-            {NAV.find(n => n.id === tab)?.label}
-          </span>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <button className="lg:hidden" onClick={() => onOpenSidebar?.()} style={{ background:'transparent', border:'none', color:'#e2e8f0', cursor:'pointer' }}>
+              <Menu size={24} />
+            </button>
+            <span style={{ fontFamily:'Orbitron',fontSize:13,fontWeight:800,color:'#475569',textTransform:'uppercase',letterSpacing:2 }}>
+              {NAV.find(n => n.id === tab)?.label}
+            </span>
+          </div>
           <div style={{ display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' }}>
             {[
               { Icon:Coins,  label:'Coins',  val:playerData.coins, c:'#f59e0b' },

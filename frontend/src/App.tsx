@@ -45,6 +45,7 @@ function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [web3LedgerLogs, setWeb3LedgerLogs] = useState<string[]>([]);
   const [botFlaggedReason, setBotFlaggedReason] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const { address, isConnected, isDisconnected } = useAccount();
   const publicClient = usePublicClient();
@@ -386,6 +387,9 @@ function App() {
             onToggleMute={handleToggleMute}
             web3LedgerLogs={web3LedgerLogs}
             onlySidebar={true}
+            isSidebarOpen={isSidebarOpen}
+            onCloseSidebar={() => setIsSidebarOpen(false)}
+            onOpenSidebar={() => setIsSidebarOpen(true)}
           />
           <div className="main-game">
             {/* Ambient animated parallax background behind the game area */}
@@ -397,6 +401,7 @@ function App() {
               activeSkin={playerData.activeSkin}
               isMuted={isMuted}
               onBotFlagged={handleBotFlagged}
+              onOpenSidebar={() => setIsSidebarOpen(true)}
             />
           </div>
         </div>
@@ -416,6 +421,9 @@ function App() {
             isMuted={isMuted}
             onToggleMute={handleToggleMute}
             web3LedgerLogs={web3LedgerLogs}
+            isSidebarOpen={isSidebarOpen}
+            onCloseSidebar={() => setIsSidebarOpen(false)}
+            onOpenSidebar={() => setIsSidebarOpen(true)}
           />
         </div>
       )}
