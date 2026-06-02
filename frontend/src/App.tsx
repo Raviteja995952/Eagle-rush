@@ -82,6 +82,18 @@ function App() {
     
     addWeb3Log(`WEB3: Initiating Base L2 session for ${selectedWallet.substring(0, 10)}...`);
 
+    // Load from local database (localStorage)
+    let localProfile: Partial<PlayerData> = {};
+    try {
+      const saved = localStorage.getItem(`eaglerush_data_${selectedWallet.toLowerCase()}`);
+      if (saved) {
+        localProfile = JSON.parse(saved);
+        addWeb3Log(`DB: Loaded local fast gameplay data for ${selectedWallet.substring(0, 10)}`);
+      }
+    } catch (e) {
+      console.error('Failed to load local profile');
+    }
+
     try {
       if (!publicClient) throw new Error("No public client available");
 
@@ -96,31 +108,32 @@ function App() {
       
       const loadedProfile: PlayerData = {
         wallet: selectedWallet,
-        level: Number(pData[0]) || 1,
-        xp: Number(pData[1]) || 0,
-        coins: Number(pData[2]) || 200,
-        streak: Number(pData[3]) || 0,
-        unlockedSkins: 'default',
-        achievements: '',
-        inventory: '',
-        activeSkin: 'default',
-        encodedProgress: ''
+        level: Math.max(Number(pData[0]) || 1, localProfile.level || 1),
+        xp: localProfile.xp !== undefined ? localProfile.xp : (Number(pData[1]) || 0),
+        coins: localProfile.coins !== undefined ? localProfile.coins : (Number(pData[2]) || 200),
+        streak: Math.max(Number(pData[3]) || 0, localProfile.streak || 0),
+        unlockedSkins: localProfile.unlockedSkins || 'default',
+        achievements: localProfile.achievements || '',
+        inventory: localProfile.inventory || '',
+        activeSkin: localProfile.activeSkin || 'default',
+        encodedProgress: localProfile.encodedProgress || ''
       };
 
       setPlayerData(loadedProfile);
+      localStorage.setItem(`eaglerush_data_${selectedWallet.toLowerCase()}`, JSON.stringify(loadedProfile));
     } catch (e) {
       addWeb3Log("SYNC: Server offline. Initializing local sandbox secure profile database.");
       const initialProfile: PlayerData = {
         wallet: selectedWallet,
-        level: 1,
-        xp: 0,
-        coins: 200,
-        streak: 0,
-        unlockedSkins: 'default',
-        achievements: '',
-        inventory: '',
-        activeSkin: 'default',
-        encodedProgress: ''
+        level: localProfile.level || 1,
+        xp: localProfile.xp || 0,
+        coins: localProfile.coins || 200,
+        streak: localProfile.streak || 0,
+        unlockedSkins: localProfile.unlockedSkins || 'default',
+        achievements: localProfile.achievements || '',
+        inventory: localProfile.inventory || '',
+        activeSkin: localProfile.activeSkin || 'default',
+        encodedProgress: localProfile.encodedProgress || ''
       };
       setPlayerData(initialProfile);
     }
@@ -148,7 +161,8 @@ function App() {
   // Secure Save Progress Sync
   const syncProgressToCloud = async (updatedData: PlayerData) => {
     setPlayerData(updatedData);
-    if (!wallet) return;
+    if (!updatedData.wallet) return;
+    localStorage.setItem(`eaglerush_data_${updatedData.wallet.toLowerCase()}`, JSON.stringify(updatedData));
   };
 
   // Level Complete Event handler
@@ -183,7 +197,7 @@ function App() {
       
       const newXp = (playerData.xp + earnedXp) % (100 * playerData.level);
       
-      setPlayerData({
+      syncProgressToCloud({
         ...playerData,
         level: levelReached,
         xp: newXp,
@@ -253,11 +267,11 @@ function App() {
       });
 
       if (pData) {
-        setPlayerData(prev => ({
-          ...prev,
+        syncProgressToCloud({
+          ...playerData,
           streak: Number(pData[3]),
           coins: Number(pData[2])
-        }));
+        });
       }
 
     } catch (e) {
