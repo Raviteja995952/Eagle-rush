@@ -22,6 +22,7 @@ interface PlayerData {
   inventory: string;
   activeSkin: string;
   encodedProgress: string;
+  lastCheckIn: number;
 }
 
 function App() {
@@ -37,7 +38,8 @@ function App() {
     achievements: '',
     inventory: '',
     activeSkin: 'default',
-    encodedProgress: ''
+    encodedProgress: '',
+    lastCheckIn: 0
   });
 
   const [leaderboardPeriod, setLeaderboardPeriod] = useState<string>('ALLTIME');
@@ -119,7 +121,8 @@ function App() {
         achievements: localProfile.achievements || '',
         inventory: localProfile.inventory || '',
         activeSkin: localProfile.activeSkin || 'default',
-        encodedProgress: localProfile.encodedProgress || ''
+        encodedProgress: localProfile.encodedProgress || '',
+        lastCheckIn: Math.max(Number(pData[4]) || 0, localProfile.lastCheckIn || 0)
       };
 
       setPlayerData(loadedProfile);
@@ -136,7 +139,8 @@ function App() {
         achievements: localProfile.achievements || '',
         inventory: localProfile.inventory || '',
         activeSkin: localProfile.activeSkin || 'default',
-        encodedProgress: localProfile.encodedProgress || ''
+        encodedProgress: localProfile.encodedProgress || '',
+        lastCheckIn: localProfile.lastCheckIn || 0
       };
       setPlayerData(initialProfile);
     }
@@ -156,7 +160,8 @@ function App() {
       achievements: '',
       inventory: '',
       activeSkin: 'default',
-      encodedProgress: ''
+      encodedProgress: '',
+      lastCheckIn: 0
     });
     addWeb3Log("INFO: Wallet disconnected. Reverted to anonymous local guest mode.");
   };
@@ -279,7 +284,8 @@ function App() {
         syncProgressToCloud({
           ...playerData,
           streak: Number(pData[3]),
-          coins: Number(pData[2])
+          coins: Number(pData[2]),
+          lastCheckIn: Number(pData[4]) || Math.floor(Date.now() / 1000)
         });
       }
 

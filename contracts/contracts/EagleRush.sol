@@ -36,10 +36,9 @@ contract EagleRush is ERC1155, Ownable {
         Player storage p = players[msg.sender];
         
         // 24 hours = 86400 seconds. 
-        // We allow checkin if it's been at least 20 hours to be forgiving.
-        require(block.timestamp >= p.lastCheckIn + 20 hours || p.lastCheckIn == 0, "Already checked in recently");
+        require(block.timestamp >= p.lastCheckIn + 1 days, "Daily reward not yet available");
 
-        if (p.lastCheckIn == 0 || block.timestamp > p.lastCheckIn + 48 hours) {
+        if (p.lastCheckIn == 0 || block.timestamp > p.lastCheckIn + 2 days) {
             p.streak = 1;
         } else {
             p.streak += 1;

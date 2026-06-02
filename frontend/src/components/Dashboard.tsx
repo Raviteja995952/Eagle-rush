@@ -4,7 +4,7 @@ import {
   Trophy, Calendar, Target, Award,
   Volume2, VolumeX, Layers, CheckCircle2,
   Compass, ShoppingBag, Terminal, Coins,
-  Flame, Shield, Lock, Gift, X, Menu
+  Flame, Shield, Lock, Gift, X, Menu, Clock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { audioSynth } from '../utils/AudioSynth';
@@ -91,6 +91,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
       return m;
     }));
   }, [playerData]);
+
+  const [timeRemaining, setTimeRemaining] = useState(0);
+
+  useEffect(() => {
+    if (!playerData || !playerData.lastCheckIn) {
+      setTimeRemaining(0);
+      return;
+    }
+    const calculateTimeLeft = () => {
+      const nextClaim = (playerData.lastCheckIn + 86400) * 1000;
+      const left = Math.max(0, nextClaim - Date.now());
+      setTimeRemaining(left);
+    };
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(interval);
+  }, [playerData.lastCheckIn]);
+
+  const formatCountdown = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h}h ${m}m ${s}s`;
+  };
 
   const fw = (a: string) => !a ? 'Not Connected' : `${a.slice(0,6)}...${a.slice(-4)}`;
 
@@ -367,30 +392,62 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <div style={{ fontSize:46,marginBottom:10 }}>🗓️</div>
                   <h2 style={{ ...S.h2,fontSize:22,letterSpacing:2 }}>DAILY STREAK</h2>
                   <p style={{ ...S.sub }}>Claim every day. Hit Day 7 for the Legendary Phoenix skin!</p>
+                  
+                  <div style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 20 }}>
+                    <Flame size={16} style={{ color: '#f59e0b' }} />
+                    <span style={{ fontFamily: 'Orbitron', fontSize: 13, fontWeight: 700, color: '#fbbf24' }}>
+                      Current Streak: Day {(playerData.streak % 7) || (playerData.streak > 0 && playerData.streak % 7 === 0 ? 7 : 0)} / 7
+                    </span>
+                  </div>
                 </motion.div>
+                
                 <motion.div variants={fadeUp} style={{ display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:9,marginBottom:26 }}>
                   {[1,2,3,4,5,6,7].map(day => {
-                    const claimed = day < playerData.streak;
-                    const today   = day === playerData.streak;
-                    const locked  = day > playerData.streak;
+                    const displayStreak = (playerData.streak % 7) || (playerData.streak > 0 && playerData.streak % 7 === 0 ? 7 : 0);
+                    const claimed = day <= displayStreak;
+                    const today = timeRemaining === 0 && day === displayStreak + 1;
+                    const locked = !claimed && !today;
                     const r: Record<number,string> = {1:'50🪙',2:'100🪙',3:'150🪙',4:'250🪙',5:'500🪙',6:'📦',7:'🔥'};
+                    
                     return (
                       <div key={day} className={`checkin-day ${claimed?'claimed':today?'today':'locked'}`}>
                         <div style={{ fontSize:9,fontFamily:'Orbitron',fontWeight:800,color:claimed?'#10b981':today?'#3b82f6':'#334155',textTransform:'uppercase',letterSpacing:.5 }}>D{day}</div>
-                        <div style={{ fontSize:20 }}>{day===7?'👑':day===6?'📦':'🪙'}</div>
-                        <div style={{ fontSize:10,fontFamily:'Inter',color:claimed?'#10b981':today?'#60a5fa':'#475569',textAlign:'center',fontWeight:600 }}>{r[day]}</div>
-                        {claimed && <CheckCircle2 size={11} style={{ color:'#10b981' }}/>}
-                        {today   && <motion.div animate={{ scale:[1,1.3,1] }} transition={{ repeat:Infinity,duration:1.5 }} style={{ width:6,height:6,borderRadius:'50%',background:'#3b82f6' }}/>}
-                        {locked  && <Lock size={10} style={{ color:'#334155',opacity:.45 }}/>}
+                        
+                        {claimed ? (
+                          <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                            <CheckCircle2 size={24} style={{ color: '#22c55e' }} />
+                          </div>
+                        ) : (
+                          <div style={{ fontSize:20 }}>{day===7?'👑':day===6?'📦':'🪙'}</div>
+                        )}
+                        
+                        <div style={{ fontSize:10,fontFamily:'Inter',color:claimed?'#10b981':today?'#60a5fa':'#475569',textAlign:'center',fontWeight:600 }}>
+                          {claimed ? 'CLAIMED' : r[day]}
+                        </div>
+                        
+                        {today && <motion.div animate={{ scale:[1,1.3,1] }} transition={{ repeat:Infinity,duration:1.5 }} style={{ width:6,height:6,borderRadius:'50%',background:'#3b82f6' }}/>}
+                        {locked && <Lock size={12} style={{ color:'#334155',opacity:.45 }}/>}
                       </div>
                     );
                   })}
                 </motion.div>
+                
                 <motion.div variants={fadeUp} style={{ textAlign:'center' }}>
-                  <motion.button className="btn-primary" onClick={() => { audioSynth.playClick(); onClaimCheckin(); }} whileTap={{ scale:.96 }}
-                    style={{ padding:'15px 44px',fontSize:13,letterSpacing:2,display:'inline-flex',alignItems:'center',gap:10 }}>
-                    <Gift size={17}/> CLAIM REWARD
-                  </motion.button>
+                  {timeRemaining > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                      <button className="btn-secondary" disabled style={{ padding:'15px 44px',fontSize:13,letterSpacing:2,display:'inline-flex',alignItems:'center',gap:10, opacity: 0.7, cursor: 'not-allowed' }}>
+                        <Clock size={17}/> CLAIM AVAILABLE IN
+                      </button>
+                      <div style={{ fontFamily: 'Orbitron', fontSize: 24, fontWeight: 800, color: '#e2e8f0', textShadow: '0 0 15px rgba(255,255,255,0.2)' }}>
+                        {formatCountdown(timeRemaining)}
+                      </div>
+                    </div>
+                  ) : (
+                    <motion.button className="btn-primary" onClick={() => { audioSynth.playClick(); onClaimCheckin(); }} whileTap={{ scale:.96 }}
+                      style={{ padding:'15px 44px',fontSize:13,letterSpacing:2,display:'inline-flex',alignItems:'center',gap:10 }}>
+                      <Gift size={17}/> CLAIM REWARD
+                    </motion.button>
+                  )}
                 </motion.div>
               </motion.div>
             )}
