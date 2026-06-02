@@ -273,6 +273,24 @@ function App() {
       addWeb3Log(`TX CONFIRMED: Claimed check-in reward onchain! Block: ${receipt?.blockNumber}`);
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
       
+      // Optimistic update to immediately reflect the state without waiting for node sync
+      const currentStreak = playerData.streak || 0;
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const nextStreak = (currentStreak === 0 || nowSeconds > playerData.lastCheckIn + 172800) ? 1 : currentStreak + 1;
+
+      console.log("=== CLAIM SUCCESS ===");
+      console.log("Current Day:", new Date().toLocaleDateString());
+      console.log("Current Streak:", nextStreak);
+      console.log("Last Claim Time:", new Date(nowSeconds * 1000).toLocaleString());
+      console.log("Next Claim Available:", new Date((nowSeconds + 86400) * 1000).toLocaleString());
+      console.log("========================");
+
+      syncProgressToCloud({
+        ...playerData,
+        streak: nextStreak,
+        lastCheckIn: nowSeconds
+      });
+      
       const pData: any = await publicClient?.readContract({
         address: EAGLE_RUSH_ADDRESS,
         abi: EAGLE_RUSH_ABI,
@@ -281,12 +299,15 @@ function App() {
       });
 
       if (pData) {
-        syncProgressToCloud({
-          ...playerData,
-          streak: Number(pData[3]),
-          coins: Number(pData[2]),
-          lastCheckIn: Number(pData[4]) || Math.floor(Date.now() / 1000)
-        });
+        // Only override if the node has actually synced the new check-in timestamp
+        if (Number(pData[4]) > playerData.lastCheckIn) {
+          syncProgressToCloud({
+            ...playerData,
+            streak: Number(pData[3]),
+            coins: Number(pData[2]),
+            lastCheckIn: Number(pData[4])
+          });
+        }
       }
 
     } catch (e) {

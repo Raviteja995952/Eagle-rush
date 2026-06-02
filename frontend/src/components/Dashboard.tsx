@@ -406,6 +406,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     const displayStreak = (playerData.streak % 7) || (playerData.streak > 0 && playerData.streak % 7 === 0 ? 7 : 0);
                     const claimed = day <= displayStreak;
                     const today = timeRemaining === 0 && day === displayStreak + 1;
+                    const nextDay = timeRemaining > 0 && day === displayStreak + 1;
                     const locked = !claimed && !today;
                     const r: Record<number,string> = {1:'50🪙',2:'100🪙',3:'150🪙',4:'250🪙',5:'500🪙',6:'📦',7:'🔥'};
                     
@@ -418,11 +419,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <CheckCircle2 size={24} style={{ color: '#22c55e' }} />
                           </div>
                         ) : (
-                          <div style={{ fontSize:20 }}>{day===7?'👑':day===6?'📦':'🪙'}</div>
+                          <div style={{ fontSize:20 }}>{nextDay ? '⭐' : day===7?'👑':day===6?'📦':'🪙'}</div>
                         )}
                         
-                        <div style={{ fontSize:10,fontFamily:'Inter',color:claimed?'#10b981':today?'#60a5fa':'#475569',textAlign:'center',fontWeight:600 }}>
-                          {claimed ? 'CLAIMED' : r[day]}
+                        <div style={{ fontSize:10,fontFamily:'Inter',color:claimed?'#10b981':today?'#60a5fa':nextDay?'#f59e0b':'#475569',textAlign:'center',fontWeight:600 }}>
+                          {claimed ? 'CLAIMED' : nextDay ? 'NEXT DAY' : r[day]}
                         </div>
                         
                         {today && <motion.div animate={{ scale:[1,1.3,1] }} transition={{ repeat:Infinity,duration:1.5 }} style={{ width:6,height:6,borderRadius:'50%',background:'#3b82f6' }}/>}
