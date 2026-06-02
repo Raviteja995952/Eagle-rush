@@ -21,7 +21,7 @@ interface PlayerData {
   encodedProgress: string;
 }
 
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = 'https://eagle-rush.onrender.com/api';
 
 function App() {
   const [gameState, setGameState] = useState<'dashboard' | 'playing'>('dashboard');
