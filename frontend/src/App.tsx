@@ -6,7 +6,10 @@ import { audioSynth } from './utils/AudioSynth';
 import { ShieldAlert } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-import { useAccount } from 'wagmi';
+import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
+import { encodeFunctionData } from 'viem';
+import * as ox from 'ox';
+import { EAGLE_RUSH_ABI, EAGLE_RUSH_ADDRESS, BUILDER_CODE_SUFFIX } from './utils/web3Config';
 
 interface PlayerData {
   wallet: string;
@@ -20,8 +23,6 @@ interface PlayerData {
   activeSkin: string;
   encodedProgress: string;
 }
-
-const API_BASE = 'https://eagle-rush.onrender.com/api';
 
 function App() {
   const [gameState, setGameState] = useState<'dashboard' | 'playing'>('dashboard');
@@ -46,6 +47,8 @@ function App() {
   const [botFlaggedReason, setBotFlaggedReason] = useState<string | null>(null);
 
   const { address, isConnected, isDisconnected } = useAccount();
+  const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
 
   // Watch for wagmi connection state changes
   useEffect(() => {
@@ -70,37 +73,7 @@ function App() {
     setWeb3LedgerLogs(prev => [`[${time}] ${msg}`, ...prev.slice(0, 49)]);
   };
 
-  // Base64 helper methods
-  const encodeProgress = (data: Omit<PlayerData, 'encodedProgress'>): string => {
-    try {
-      const jsonStr = JSON.stringify(data);
-      return btoa(jsonStr);
-    } catch (e) {
-      console.error("Failed to encode progress", e);
-      return "";
-    }
-  };
-
-  const decodeProgress = (base64Str: string): any => {
-    try {
-      const jsonStr = atob(base64Str);
-      return JSON.parse(jsonStr);
-    } catch (e) {
-      console.error("Failed to decode progress", e);
-      return null;
-    }
-  };
-
-  // Simple cryptographic simulation (SHA256 signature)
-  const generatePayloadSignature = (walletAddr: string, levelNum: number, coinCount: number): string => {
-    const key = `eaglerush_salt_${walletAddr}_${levelNum}_${coinCount}`;
-    // Simple fast DJB2 hash generator representing cryptographic integrity
-    let hash = 5381;
-    for (let i = 0; i < key.length; i++) {
-      hash = (hash * 33) ^ key.charCodeAt(i);
-    }
-    return (hash >>> 0).toString(16);
-  };
+  // Base64 helper methods removed
 
   // Wallet Sign-In / Connection
   const authenticateWalletSession = async (selectedWallet: string) => {
@@ -109,67 +82,47 @@ function App() {
     
     addWeb3Log(`WEB3: Initiating Base L2 session for ${selectedWallet.substring(0, 10)}...`);
 
-    // API POST Connect
     try {
-      const response = await fetch(`${API_BASE}/game/connect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet: selectedWallet })
+      if (!publicClient) throw new Error("No public client available");
+
+      const pData: any = await publicClient.readContract({
+        address: EAGLE_RUSH_ADDRESS,
+        abi: EAGLE_RUSH_ABI,
+        functionName: 'players',
+        args: [selectedWallet as `0x${string}`]
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        addWeb3Log(`SYNC: Cloud profile loaded successfully. Status: level ${data.level}, coins ${data.coins}`);
-        
-        let loadedProfile: PlayerData = {
-          wallet: data.wallet,
-          level: data.level,
-          xp: data.xp,
-          coins: data.coins,
-          streak: data.streak,
-          unlockedSkins: data.unlockedSkins,
-          achievements: data.achievements,
-          inventory: data.inventory,
-          activeSkin: data.activeSkin || 'default',
-          encodedProgress: data.encodedProgress || ''
-        };
+      addWeb3Log(`SYNC: Onchain profile loaded successfully. Status: level ${pData[0] || 1}, coins ${pData[2] || 200}`);
+      
+      const loadedProfile: PlayerData = {
+        wallet: selectedWallet,
+        level: Number(pData[0]) || 1,
+        xp: Number(pData[1]) || 0,
+        coins: Number(pData[2]) || 200,
+        streak: Number(pData[3]) || 0,
+        unlockedSkins: 'default',
+        achievements: '',
+        inventory: '',
+        activeSkin: 'default',
+        encodedProgress: ''
+      };
 
-        // If encoded progress was present, sync check local parameters
-        if (data.encodedProgress) {
-          const decoded = decodeProgress(data.encodedProgress);
-          if (decoded && decoded.level >= loadedProfile.level) {
-            loadedProfile = { ...loadedProfile, ...decoded };
-          }
-        }
-
-        setPlayerData(loadedProfile);
-        addWeb3Log(`TX: Wallet Authentication verified on-chain. Hash: 0x${Array.from({length:32},()=>Math.floor(Math.random()*16).toString(16)).join('')}`);
-      } else {
-        throw new Error('Server returned error');
-      }
+      setPlayerData(loadedProfile);
     } catch (e) {
-      // Local sandbox fallbacks when Spring Boot server is offline
       addWeb3Log("SYNC: Server offline. Initializing local sandbox secure profile database.");
-      const localData = localStorage.getItem(`local_profile_${selectedWallet}`);
-      if (localData) {
-        setPlayerData(JSON.parse(localData));
-        addWeb3Log("SYNC: Local backup profile synced successfully.");
-      } else {
-        const initialProfile: PlayerData = {
-          wallet: selectedWallet,
-          level: 1,
-          xp: 0,
-          coins: 200,
-          streak: 0,
-          unlockedSkins: 'default',
-          achievements: '',
-          inventory: '',
-          activeSkin: 'default',
-          encodedProgress: ''
-        };
-        setPlayerData(initialProfile);
-        localStorage.setItem(`local_profile_${selectedWallet}`, JSON.stringify(initialProfile));
-      }
+      const initialProfile: PlayerData = {
+        wallet: selectedWallet,
+        level: 1,
+        xp: 0,
+        coins: 200,
+        streak: 0,
+        unlockedSkins: 'default',
+        achievements: '',
+        inventory: '',
+        activeSkin: 'default',
+        encodedProgress: ''
+      };
+      setPlayerData(initialProfile);
     }
   };
 
@@ -193,222 +146,122 @@ function App() {
   };
 
   // Secure Save Progress Sync
-  const syncProgressToCloud = async (updatedData: PlayerData, gameSessionMetrics?: any) => {
-    const encoded = encodeProgress(updatedData);
-    const finalData = { ...updatedData, encodedProgress: encoded };
-    setPlayerData(finalData);
-
+  const syncProgressToCloud = async (updatedData: PlayerData) => {
+    setPlayerData(updatedData);
     if (!wallet) return;
-
-    // Secure click coordinates & heuristics signature
-    const signature = generatePayloadSignature(wallet, finalData.level, finalData.coins);
-    
-    const requestPayload = {
-      ...finalData,
-      ...gameSessionMetrics,
-      signature
-    };
-
-    try {
-      const response = await fetch(`${API_BASE}/game/save`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestPayload)
-      });
-
-      if (response.ok) {
-        addWeb3Log(`TX: Progress cloud block saved on Base. Level ${finalData.level} / ${finalData.coins} Coins. Hash: 0x${Array.from({length:32},()=>Math.floor(Math.random()*16).toString(16)).join('')}`);
-      } else {
-        if (response.status === 403) {
-          const errData = await response.json();
-          if (errData.flagged) {
-            handleBotFlagged(errData.reason);
-          }
-        }
-        throw new Error('Save error');
-      }
-    } catch (e) {
-      // Local fallback sync
-      localStorage.setItem(`local_profile_${wallet}`, JSON.stringify(finalData));
-      addWeb3Log("SYNC: Server offline. Secure local storage update successfully complete.");
-    }
   };
 
   // Level Complete Event handler
-  const handleLevelComplete = (earnedCoins: number, earnedXp: number, finalScore: number) => {
+  const handleLevelComplete = async (earnedCoins: number, earnedXp: number, finalScore: number) => {
     setGameState('dashboard');
     audioSynth.playRewardClaim();
-
-    // Trigger full screen confetti celebrations
     confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
 
-    // Update level and calculations
-    let newXp = playerData.xp + earnedXp;
-    let newLevel = playerData.level;
-    const targetXp = 100 * newLevel;
-
-    if (newXp >= targetXp) {
-      newLevel++;
-      newXp = newXp - targetXp;
-      addWeb3Log(`MINT: Level Up Badge NFT unlocked. New Level: ${newLevel}!`);
+    if (!walletClient || !address) {
+      alert("Please connect wallet first");
+      return;
     }
-
-    // Achievements unlocking triggers
-    let achievements = playerData.achievements;
-    const items = achievements.split(',').filter(Boolean);
-
-    if (newLevel >= 20 && !items.includes('level_20')) {
-      items.push('level_20');
-      addWeb3Log("ACHIEVEMENT UNLOCKED: Level 20 reached. Minting NFT medal...");
-      audioSynth.playAchievement();
-    }
-    if (newLevel >= 40 && !items.includes('level_40')) {
-      items.push('level_40');
-      addWeb3Log("ACHIEVEMENT UNLOCKED: Level 40 master reached. Minting gold medal...");
-      audioSynth.playAchievement();
-    }
-    if (!items.includes('first_hunt')) {
-      items.push('first_hunt');
-      addWeb3Log("ACHIEVEMENT UNLOCKED: First Hunt completed. Minting NFT medal...");
-      audioSynth.playAchievement();
-    }
-
-    const updatedAchievements = items.join(',');
-
-    const updatedProfile: PlayerData = {
-      ...playerData,
-      level: newLevel,
-      xp: newXp,
-      coins: playerData.coins + earnedCoins,
-      achievements: updatedAchievements
-    };
-
-    // Construct security heuristics
-    const metrics = {
-      score: finalScore,
-      clicks: finalScore * 2,
-      hits: finalScore / 10 + 1,
-      playDurationSeconds: 25,
-      minClickIntervalMs: 80,
-      avgClickIntervalMs: 250,
-      clickIntervalStdDev: 50,
-      mouseTracked: true
-    };
-
-    syncProgressToCloud(updatedProfile, metrics);
-    
-    // Submit Score to Leaderboard
-    submitScoreToLeaderboard(finalScore, newLevel, newXp, items.length);
-  };
-
-  // Submit Leaderboard score API
-  const submitScoreToLeaderboard = async (score: number, lvl: number, xpVal: number, achCount: number) => {
-    if (!wallet) return;
-
-    const requestPayload = {
-      wallet: wallet,
-      score: score,
-      level: lvl,
-      xp: xpVal,
-      achievementsCount: achCount,
-      period: 'ALLTIME'
-    };
 
     try {
-      await fetch(`${API_BASE}/leaderboard/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestPayload)
+      const levelReached = playerData.level + (playerData.xp + earnedXp >= 100 * playerData.level ? 1 : 0);
+      
+      // We append Builder Code to this action!
+      const data = encodeFunctionData({
+        abi: EAGLE_RUSH_ABI,
+        functionName: 'submitScore',
+        args: [BigInt(levelReached), BigInt(finalScore), BigInt(1)]
       });
-      fetchLeaderboard();
-    } catch(e) {
-      console.log('Leaderboard submit failed (local sandbox environment mode active)');
+
+      const dataWithSuffix = ox.Hex.concat(data as `0x${string}`, BUILDER_CODE_SUFFIX as `0x${string}`);
+
+      const hash = await walletClient.sendTransaction({
+        to: EAGLE_RUSH_ADDRESS,
+        data: dataWithSuffix
+      });
+      
+      addWeb3Log(`TX: Score Submitted to Base L2! Hash: ${hash}`);
+      
+      const newXp = (playerData.xp + earnedXp) % (100 * playerData.level);
+      
+      setPlayerData({
+        ...playerData,
+        level: levelReached,
+        xp: newXp,
+        coins: playerData.coins + earnedCoins
+      });
+
+    } catch (e) {
+      addWeb3Log("ERROR: Failed to submit score transaction to Base.");
     }
   };
 
   // Fetch Leaderboard records
   const fetchLeaderboard = async () => {
     try {
-      const response = await fetch(`${API_BASE}/leaderboard?period=${leaderboardPeriod}`);
-      if (response.ok) {
-        const data = await response.json();
-        setLeaderboardData(data);
-      } else {
-        throw new Error('Leaderboard fetch failed');
-      }
+      if (!publicClient) return;
+      const data = await publicClient.readContract({
+        address: EAGLE_RUSH_ADDRESS,
+        abi: EAGLE_RUSH_ABI,
+        functionName: 'getLeaderboard'
+      }) as [readonly string[], readonly bigint[], readonly bigint[], readonly bigint[]];
+
+      const addrs = data[0];
+      const scores = data[1];
+      const levels = data[2];
+      
+      const formatted = addrs.map((addr, i) => ({
+        wallet: addr,
+        score: Number(scores[i]),
+        level: Number(levels[i]),
+        xp: 0
+      })).sort((a, b) => b.score - a.score);
+
+      setLeaderboardData(formatted);
     } catch (e) {
-      // Local fallback mock rankings
-      setLeaderboardData([
-        { wallet: '0x32890dbfd89f78ad89fd9203893a789efef8789d', score: 4850, level: 32, xp: 250 },
-        { wallet: '0x99238e89adbf7823ab89d09a89d09a0a80e0e0a0', score: 3200, level: 25, xp: 120 },
-        { wallet: '0xfa03bc489d877ad89f78ae029e09d8aa00e008aa', score: 2150, level: 18, xp: 450 },
-        { wallet: '0x7e29abdf87823ab89e02389a9f23ab8d7ee23c72', score: 1800, level: 12, xp: 80 },
-        { wallet: wallet || '0xsimulated_base_wallet', score: playerData.level * 180, level: playerData.level, xp: playerData.xp }
-      ].sort((a, b) => b.score - a.score));
+      setLeaderboardData([]);
     }
   };
 
   // Daily Check-In claiming logic
   const handleClaimCheckin = async () => {
-    if (!wallet) {
+    if (!walletClient || !address) {
       alert('Please connect your Base wallet to claim streak rewards!');
       return;
     }
 
     try {
-      const response = await fetch(`${API_BASE}/game/checkin`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wallet })
+      const data = encodeFunctionData({
+        abi: EAGLE_RUSH_ABI,
+        functionName: 'dailyCheckIn'
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        addWeb3Log(`STREAK: Claimed check-in reward! Day ${data.streak}. Earned +${data.coinReward} Coins!`);
-        
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
-        setPlayerData({
-          ...playerData,
-          streak: data.streak,
-          coins: data.totalCoins,
-          unlockedSkins: data.player.unlockedSkins,
-          inventory: data.player.inventory
-        });
-      } else {
-        const err = await response.json();
-        alert(err.error || 'Already claimed today!');
-      }
-    } catch (e) {
-      // Local streak claim bypass when server offline
-      addWeb3Log("STREAK: Claimed local check-in reward!");
+      const dataWithSuffix = ox.Hex.concat(data as `0x${string}`, BUILDER_CODE_SUFFIX as `0x${string}`);
+
+      const txHash = await walletClient.sendTransaction({
+        to: EAGLE_RUSH_ADDRESS,
+        data: dataWithSuffix
+      });
+
+      addWeb3Log(`STREAK: Claimed check-in reward onchain! Hash: ${txHash}`);
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.8 } });
       
-      const newStreak = (playerData.streak % 7) + 1;
-      let coinReward = 50;
-      let extra = '';
-      if (newStreak === 2) coinReward = 100;
-      if (newStreak === 3) coinReward = 150;
-      if (newStreak === 4) coinReward = 250;
-      if (newStreak === 5) coinReward = 500;
-      if (newStreak === 6) { coinReward = 1000; extra = 'rare_chest'; }
-      if (newStreak === 7) { coinReward = 5000; extra = 'legendary_phoenix'; }
+      const pData: any = await publicClient?.readContract({
+        address: EAGLE_RUSH_ADDRESS,
+        abi: EAGLE_RUSH_ABI,
+        functionName: 'players',
+        args: [address as `0x${string}`]
+      });
 
-      let inv = playerData.inventory;
-      if (extra === 'rare_chest') inv = inv ? inv + ',rare_chest' : 'rare_chest';
-      
-      let skins = playerData.unlockedSkins;
-      if (extra === 'legendary_phoenix') skins = skins + ',legendary_phoenix';
+      if (pData) {
+        setPlayerData(prev => ({
+          ...prev,
+          streak: Number(pData[3]),
+          coins: Number(pData[2])
+        }));
+      }
 
-      const updated = {
-        ...playerData,
-        streak: newStreak,
-        coins: playerData.coins + coinReward,
-        inventory: inv,
-        unlockedSkins: skins
-      };
-
-      setPlayerData(updated);
-      localStorage.setItem(`local_profile_${wallet}`, JSON.stringify(updated));
+    } catch (e) {
+      addWeb3Log("ERROR: Already claimed today or transaction rejected!");
     }
   };
 
@@ -459,14 +312,30 @@ function App() {
     addWeb3Log(`SECURITY EXCEPTION: ${reason}`);
   };
 
-  const handleStartGameClick = () => {
-    if (!wallet) {
+  const handleStartGameClick = async () => {
+    if (!walletClient || !address) {
       alert('Please connect your Base L2 wallet before hunting eagles!');
       return;
     }
-    audioSynth.playClick();
-    setGameState('playing');
-    addWeb3Log("ARENA: Sky session initialized. Loading flight path generators...");
+
+    try {
+      const data = encodeFunctionData({
+        abi: EAGLE_RUSH_ABI,
+        functionName: 'startSkyHunt'
+      });
+      const dataWithSuffix = ox.Hex.concat(data as `0x${string}`, BUILDER_CODE_SUFFIX as `0x${string}`);
+
+      await walletClient.sendTransaction({
+        to: EAGLE_RUSH_ADDRESS,
+        data: dataWithSuffix
+      });
+      
+      audioSynth.playClick();
+      setGameState('playing');
+      addWeb3Log("ARENA: Sky session initialized onchain. Loading flight path generators...");
+    } catch (e) {
+      addWeb3Log("ERROR: User rejected transaction to start hunt.");
+    }
   };
 
   return (
